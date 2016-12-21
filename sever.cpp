@@ -46,7 +46,7 @@ int main() {
         exit(1);
     }
 
-    key_t sem_key = ftok(".", getpid());
+    key_t sem_key = ftok(".", 's');
     if (sem_key < 0) {
         perror("ftok");
         exit(1);
@@ -62,20 +62,39 @@ int main() {
     sem_union.val = 1;
 
     // init semaphore
-    if(semctl(sem_id, 0, SETVAL, sem_union) == -1) {
+    if (semctl(sem_id, 0, SETVAL, sem_union) == -1) {
         perror("semctl:init");
         exit(1);
     }
 
     // remove semaphore
-    if(semctl(sem_id, 0, IPC_RMID, NULL) == -1) {
+    if (semctl(sem_id, 0, IPC_RMID, NULL) == -1) {
         perror("semctl:remove");
         exit(1);
     }
 
     message = (char *) sh_mem_ptr;
 
+    struct sembuf sem_buff;
 
+    printf("Server is running...\n");
+
+    while (true) {
+
+        sem_buff = {0, -1, 0};
+        if (semop(sem_id, &sem_buff, 1) == -1) {
+            perror("semop");
+            exit(1);
+        }
+
+        printf("ECHO: %s \n", message);
+
+        sem_buff = {0, 1, 0};
+        if (semop(sem_id, &sem_buff, 1) == -1) {
+            perror("semop");
+            exit(1);
+        }
+    }
 
     // detach shared memory segment
     if (shmdt(sh_mem_ptr) != 0) {

@@ -3,6 +3,7 @@
 #include <sys/shm.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/sem.h>
 
 #define SHMSIZE 100
 
@@ -29,10 +30,38 @@ int main() {
         exit(1);
     }
 
-    // detach shared memory segment
-    if (shmdt(sh_mem_ptr) != 0) {
-        perror("shmat");
+    key_t sem_key = ftok(".", 's');
+    if (sem_key < 0) {
+        perror("ftok");
         exit(1);
+    }
+
+    int sem_id = semget(sem_key, 1, IPC_CREAT | 0666);
+    if (sem_key < 0) {
+        perror("semget");
+        exit(1);
+    }
+
+    struct sembuf sem_buff;
+
+    char *message = (char *) sh_mem_ptr;
+
+    while(true) {
+
+        sem_buff = {0, -1, 0};
+        if (semop(sem_id, &sem_buff, 1) == -1) {
+            perror("semop");
+            exit(1);
+        }
+
+        printf("Enter text: \n");
+        fgets(message, 100, stdin);
+
+        sem_buff = {0, 1, 0};
+        if (semop(sem_id, &sem_buff, 1) == -1) {
+            perror("semop");
+            exit(1);
+        }
     }
 
     return 0;
