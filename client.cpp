@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/sem.h>
+#include <unistd.h>
 
 #define SHMSIZE 100
 
@@ -25,7 +26,7 @@ int main() {
 
     // attach the indicated shared memory to the process's address space
     void *sh_mem_ptr = shmat(sh_mem_id, NULL, 0);
-    if ((int) sh_mem_ptr < 0) {
+    if ((int *) sh_mem_ptr < 0) {
         perror("shmat");
         exit(1);
     }
@@ -36,7 +37,7 @@ int main() {
         exit(1);
     }
 
-    int sem_id = semget(sem_key, 1, IPC_CREAT | 0666);
+    int sem_id = semget(sem_key, 2, IPC_CREAT | 0666);
     if (sem_key < 0) {
         perror("semget");
         exit(1);
@@ -46,8 +47,15 @@ int main() {
 
     char *message = (char *) sh_mem_ptr;
 
-    while(true) {
+    while (true) {
+        //lock client
+        sem_buff = {1, -1, 0};
+        if (semop(sem_id, &sem_buff, 1) == -1) {
+            perror("semop");
+            exit(1);
+        }
 
+        //lock server
         sem_buff = {0, -1, 0};
         if (semop(sem_id, &sem_buff, 1) == -1) {
             perror("semop");
@@ -57,11 +65,20 @@ int main() {
         printf("Enter text: \n");
         fgets(message, 100, stdin);
 
+        //unlock server
         sem_buff = {0, 1, 0};
         if (semop(sem_id, &sem_buff, 1) == -1) {
             perror("semop");
             exit(1);
         }
+
+        //unlock client
+        sem_buff = {1, 1, 0};
+        if (semop(sem_id, &sem_buff, 1) == -1) {
+            perror("semop");
+            exit(1);
+        }
+        usleep(5);
     }
 
     return 0;

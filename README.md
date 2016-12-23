@@ -9,3 +9,5 @@ https://stereochro.me/assets/uploads/notes/dcom3/shmem.pdf
 https://www.opennet.ru/base/dev/rpc_intro.txt.html
 
 http://space.wccnet.edu/~chasselb/linux275/ClassNotes/ipc/shared_mem.htm
+
+http://beej.us/guide/bgipc/output/html/multipage/semaphores.html

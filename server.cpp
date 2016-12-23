@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <cstring>
 
 #if defined(__GNU_LIBRARY__) && !defined(_SEM_SEMUN_UNDEFINED)
 /* union semun is defined by including <sys/sem.h> */
@@ -33,7 +34,7 @@ int main() {
     }
 
     // request a shared memory segment
-    int sh_mem_id = shmget(sh_mem_key, SHMSIZE, IPC_CREAT | 0666);
+    int sh_mem_id = shmget(sh_mem_key, SHMSIZE, 0666);
     if (sh_mem_id < 0) {
         perror("shmget");
         exit(1);
@@ -41,7 +42,7 @@ int main() {
 
     // attach the indicated shared memory to the process's address space
     void *sh_mem_ptr = shmat(sh_mem_id, NULL, 0);
-    if ((int) sh_mem_ptr < 0) {
+    if ((int *) sh_mem_ptr < 0) {
         perror("shmat");
         exit(1);
     }
@@ -52,7 +53,7 @@ int main() {
         exit(1);
     }
 
-    int sem_id = semget(sem_key, 1, IPC_CREAT | 0666);
+    int sem_id = semget(sem_key, 2, 0666);
     if (sem_key < 0) {
         perror("semget");
         exit(1);
@@ -61,15 +62,14 @@ int main() {
     union semun sem_union;
     sem_union.val = 1;
 
-    // init semaphore
+    // init first semaphore - for communication with server
     if (semctl(sem_id, 0, SETVAL, sem_union) == -1) {
-        perror("semctl:init");
+        perror("semctl:init:0");
         exit(1);
     }
-
-    // remove semaphore
-    if (semctl(sem_id, 0, IPC_RMID, NULL) == -1) {
-        perror("semctl:remove");
+    // init second semaphore - for clients communication
+    if (semctl(sem_id, 1, SETVAL, sem_union) == -1) {
+        perror("semctl:init:1");
         exit(1);
     }
 
@@ -81,31 +81,26 @@ int main() {
 
     while (true) {
 
+        //lock sem
         sem_buff = {0, -1, 0};
         if (semop(sem_id, &sem_buff, 1) == -1) {
             perror("semop");
             exit(1);
         }
 
-        printf("ECHO: %s \n", message);
+        if (strcmp(message, "")) {
+            printf("ECHO: %s \n", message);
+            strcpy(message, "");
+        }
 
+        //unlock sem
         sem_buff = {0, 1, 0};
         if (semop(sem_id, &sem_buff, 1) == -1) {
             perror("semop");
             exit(1);
         }
+        usleep(1);
     }
 
-    // detach shared memory segment
-    if (shmdt(sh_mem_ptr) != 0) {
-        perror("shmat");
-        exit(1);
-    }
-
-    // remove shared memory segment
-    if (shmctl(sh_mem_id, IPC_RMID, NULL) < 0) {
-        perror("shmctl");
-        exit(1);
-    }
     return 0;
 }
