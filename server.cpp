@@ -5,7 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <cstring>
+#include <string.h>
+
+#include "echo.h"
 
 #if defined(__GNU_LIBRARY__) && !defined(_SEM_SEMUN_UNDEFINED)
 /* union semun is defined by including <sys/sem.h> */
@@ -20,21 +22,19 @@ union semun {
 };
 #endif
 
-#define SHMSIZE 100
-
 int main() {
 
     char *message;
 
     //create a key for shared memory
-    key_t sh_mem_key = ftok(".", 'x');
+    key_t sh_mem_key = ftok(SH_M_PATH, SH_M_PROJ_ID);
     if (sh_mem_key < 0) {
         perror("ftok");
         exit(1);
     }
 
     // request a shared memory segment
-    int sh_mem_id = shmget(sh_mem_key, SHMSIZE, 0666);
+    int sh_mem_id = shmget(sh_mem_key, SH_M_SIZE, 0666);
     if (sh_mem_id < 0) {
         perror("shmget");
         exit(1);
@@ -47,7 +47,7 @@ int main() {
         exit(1);
     }
 
-    key_t sem_key = ftok(".", 's');
+    key_t sem_key = ftok(SEM_PATH, SEM_PROJ_ID);
     if (sem_key < 0) {
         perror("ftok");
         exit(1);
@@ -89,7 +89,7 @@ int main() {
         }
 
         if (strcmp(message, "")) {
-            printf("ECHO: %s \n", message);
+            printf("ECHO: %s", message);
             strcpy(message, "");
         }
 

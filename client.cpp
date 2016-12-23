@@ -6,7 +6,7 @@
 #include <sys/sem.h>
 #include <unistd.h>
 
-#define SHMSIZE 100
+#include "echo.h"
 
 int main() {
 
@@ -18,7 +18,7 @@ int main() {
     }
 
     // request a shared memory segment
-    int sh_mem_id = shmget(sh_mem_key, SHMSIZE, 0666);
+    int sh_mem_id = shmget(sh_mem_key, SH_M_SIZE, 0666);
     if (sh_mem_id < 0) {
         perror("shmget");
         exit(1);
@@ -31,7 +31,7 @@ int main() {
         exit(1);
     }
 
-    key_t sem_key = ftok(".", 's');
+    key_t sem_key = ftok(SEM_PATH, SEM_PROJ_ID);
     if (sem_key < 0) {
         perror("ftok");
         exit(1);

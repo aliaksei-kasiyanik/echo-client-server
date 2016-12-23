@@ -3,17 +3,17 @@
 #include <stdlib.h>
 #include <sys/shm.h>
 
-#define SHMSIZE 100
+#include "echo.h"
 
 int main() {
-    key_t sh_mem_key = ftok(".", 'x');
+    key_t sh_mem_key = ftok(SH_M_PATH, SH_M_PROJ_ID);
     if (sh_mem_key < 0) {
         perror("ftok");
         exit(1);
     }
 
     // request a shared memory segment
-    int sh_mem_id = shmget(sh_mem_key, SHMSIZE, 0666 | IPC_CREAT);
+    int sh_mem_id = shmget(sh_mem_key, SH_M_SIZE, 0666 | IPC_CREAT);
     if (sh_mem_id < 0) {
         perror("shmget");
         exit(1);
@@ -26,7 +26,7 @@ int main() {
         exit(1);
     }
 
-    key_t sem_key = ftok(".", 's');
+    key_t sem_key = ftok(SEM_PATH, SEM_PROJ_ID);
     if (sem_key < 0) {
         perror("ftok");
         exit(1);
@@ -38,7 +38,7 @@ int main() {
         exit(1);
     }
 
-    printf("Semaphores and shared memore are initialized...\n");
+    printf("Semaphores and shared memory are initialized...\n");
 
     printf("Press ENTER key to clean up resources:\n");
     getchar();
